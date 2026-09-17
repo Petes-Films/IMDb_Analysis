@@ -1,0 +1,8 @@
+"0",""
+"0","renderText({"
+"0","  "
+"0","  fit <- lm(as.formula(paste(input$Ratings, ""~ year"")), data = filtered_data(),)"
+"0","  paste0(rating_label(), "" Adjusted R²: "", round(summary(fit)$adj.r.squared, 3))"
+"0","})"
+"1","<shiny.render.function> 
+"

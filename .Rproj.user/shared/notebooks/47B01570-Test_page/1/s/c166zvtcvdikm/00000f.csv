@@ -1,0 +1,5 @@
+"0","    "
+"0","    selectInput(""Map_Factor"", ""Select Factor to Heat Map"", "
+"0","                choices = c(""Films Watched"" = ""My_Ratio"",  #= ""hit_rate_shrunk"", "
+"0","                            ""My Rating"" = ""ave_rat"", "
+"0","                            ""Public Rating"" = ""ave_irat""))"

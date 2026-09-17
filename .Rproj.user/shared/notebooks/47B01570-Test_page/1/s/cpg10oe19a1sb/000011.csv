@@ -1,0 +1,3 @@
+"0","     "
+"0","    numericInput(inputId = 'K_Factor', label = 'Select the weighting for the score',"
+"0","     min = 0.01, max = 10, value = 0.7, step = 0.01)"

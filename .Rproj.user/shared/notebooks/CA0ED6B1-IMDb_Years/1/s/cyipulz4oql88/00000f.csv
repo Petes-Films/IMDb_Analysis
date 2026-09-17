@@ -1,0 +1,3 @@
+"0",""
+"0","    sliderInput(inputId = 'Movies_Count', label = 'Select range',"
+"0","    min = min(Year_Stats$no_of_films), max = max(Year_Stats$no_of_films), value = 6, step = 1)"

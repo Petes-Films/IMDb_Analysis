@@ -1,0 +1,512 @@
+# Split facet wrap into bigger and smaller genres to make heat map more clear for smaller genres
+Tidy_Ratings %>%
+select(movie_ID, your_rating, IMDb_Rating_Rnd) %>%
+left_join(Genre_long, by = "movie_ID") %>%
+group_by(genre) %>%
+filter(n() > 500) %>%
+dplyr::count(IMDb_Rating_Rnd, your_rating, name = "n") %>%
+ggplot(aes(IMDb_Rating_Rnd, your_rating, fill = n)) +
+geom_tile(color = "white") +
+scale_fill_viridis_c(name = "Count", option = "C") + # could look at better colours range
+scale_x_continuous("IMDb rating (rounded)", breaks = 1:10) +
+scale_y_continuous("My rating", breaks = 2:10, limits = c(1, 11)) +
+facet_wrap(~genre) +
+labs(title = "Heatmap of My Ratings vs IMDb Rating") +
+theme(legend.position = "right")
+Tidy_Ratings %>%
+select(movie_ID, your_rating, IMDb_Rating_Rnd) %>%
+left_join(Genre_long, by = "movie_ID") %>%
+group_by(genre) %>%
+filter(n() > 49, n() < 500) %>%
+dplyr::count(IMDb_Rating_Rnd, your_rating, name = "n") %>%
+ggplot(aes(IMDb_Rating_Rnd, your_rating, fill = n)) +
+geom_tile(color = "white") +
+scale_fill_viridis_c(name = "Count", option = "C") + # could look at better colours range
+scale_x_continuous("IMDb rating (rounded)", breaks = 1:10) +
+scale_y_continuous("My rating", breaks = 2:10, limits = c(1, 11)) +
+facet_wrap(~genre) +
+labs(title = "Heatmap of My Ratings vs IMDb Rating") +
+theme(legend.position = "right")
+Genre_Stats %>%
+filter(count > 100) %>%
+ggplot(aes(x = ave_rat, color = genre)) +
+geom_point(aes(y=ave_irat, size = 10)) +
+labs(x = "My Average",
+y = "IMDb Average",
+title = "Genre average rating differences") +
+theme_classic() +
+theme(plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+legend.background = element_rect(color ="steelblue", size = 0.75),
+legend.box.just = "centre",
+legend.margin = margin(0, 6, 8, 2))
+a <- Genre_long %>%
+inner_join(Tidy_Ratings, by = "movie_ID") %>%
+summarise_my_scores_by_field(., genre, 100) #%>%  # do I want o hard code this as genre filter?
+View(a)
+Genre_long %>%
+inner_join(Tidy_Ratings, by = "movie_ID") %>%
+summarise_my_scores_by_field(., genre, 100) %>%  # do I want o hard code this as genre filter?
+ggplot(aes(x = my_ave, color = genre)) +
+geom_point(aes(y=pub_ave, size = 10)) +
+labs(x = "My Average",
+y = "IMDb Average",
+title = "Genre average rating differences") +
+theme_classic() +
+theme(plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+legend.background = element_rect(color ="steelblue", size = 0.75),
+legend.box.just = "centre",
+legend.margin = margin(0, 6, 8, 2))
+Genre_long %>%
+inner_join(Tidy_Ratings, by = "movie_ID") %>%
+summarise_my_scores_by_field(., genre, 100) %>%  # do I want o hard code this as genre filter?
+ggplot(aes(x = my_ave, color = genre)) +
+geom_point(aes(y=pub_ave, size = 10)) +
+labs(x = "My Average",
+y = "IMDb Average",
+title = "Genre average rating differences") +
+theme_classic() +
+theme(plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+legend.background = element_rect(color ="steelblue", linewidth = 0.75),
+legend.box.just = "centre",
+legend.margin = margin(0, 6, 8, 2))
+source(here::here("R","globals.R"))
+source(here::here("R", "core_data.R")) #No stats brought through yet!!!
+# As comparing just my vote against public really should take out films when it is just my vote
+# Tidy_Ratings <- Tidy_Ratings %>%
+#   filter(num_votes > 1)
+ImDb_Rate_Count <- summarise_my_scores_by_field(Tidy_Ratings, IMDb_Rating)
+IMDb_Whole_Count <- summarise_my_scores_by_field(Tidy_Ratings, IMDb_Rating_Rnd)
+correlation <- Tidy_Ratings %>%
+cor(your_rating, IMDb_Rating, method = 'pearson')
+correlation <- Tidy_Ratings %>%
+cor(your_rating, IMDb_Rating, method = 'pearson')
+View(Tidy_Ratings)
+correlation <- cor(Tidy_Ratings$your_rating, Tidy_Ratings$IMDb_Rating, method = 'pearson')
+Tidy_Ratings %>%
+mutate(imdb_bin = round(IMDb_Rating,1)) %>%
+group_by(imdb_bin) %>%
+summarise(
+mean_rating = mean(your_rating),
+n = n(),
+se = sd(your_rating)/sqrt(n)
+)
+Test <- Tidy_Ratings %>%
+mutate(like = your_rating >= 7)
+View(Test)
+glm(like ~ IMDb_Rating, family=binomial)
+glm(like ~ IMDb_Rating, family=binomial, data = test)
+glm(like ~ IMDb_Rating, family=binomial, data = Test)
+summary(Test)
+a <- glm(like ~ IMDb_Rating, family=binomial, data = Test)
+summary(a)
+View(Tidy_Ratings)
+Year_Stats <- Tidy_Ratings  %>%
+group_by(year) %>%
+summarise("no_of_films" = n(),
+"ave_rat" = mean(your_rating),
+"my_sd_rat" = sd(your_rating),
+"my_se" = my_sd_rat / sqrt(n),
+"ave_irat" = mean(IMDb_Rating),
+"pub_sd_rat" = sd(IMDb_Rating),
+"pub_se" = pub_sd_rat / sqrt(n),
+"ave_runtime" = mean(runtime_mins),
+"ave_dif" = round(mean(rate_dif), 2),
+"ave_votes" = mean(num_votes))
+Year_Stats <- Tidy_Ratings  %>%
+group_by(year) %>%
+summarise("no_of_films" = n(),
+"ave_rat" = mean(your_rating),
+"my_sd_rat" = sd(your_rating),
+"my_se" = my_sd_rat / sqrt(no_of_films),
+"ave_irat" = mean(IMDb_Rating),
+"pub_sd_rat" = sd(IMDb_Rating),
+"pub_se" = pub_sd_rat / sqrt(no_of_films),
+"ave_runtime" = mean(runtime_mins),
+"ave_dif" = round(mean(rate_dif), 2),
+"ave_votes" = mean(num_votes))
+View(Year_Stats)
+Total_Stats <- list(
+my_ave = mean(Tidy_Ratings$your_rating),
+pub_ave = mean(Tidy_Ratings$IMDb_Rating, na.rm = T),
+dif_lowerq = quantile(Tidy_Ratings$rate_dif, probs = c(0.025)),
+dif_upperq = quantile(Tidy_Ratings$rate_dif, probs = c(0.975))
+)
+prior_strength <- 20  # tweakable
+A <- Year_Stats %>%
+mutate(
+shrink_weight = n / (n + prior_strength),
+shrunk_mean = shrink_weight * ave_rat +
+(1 - shrink_weight) * Total_Stats$my_ave
+)
+A <- Year_Stats %>%
+mutate(
+shrink_weight = no_of_films / (no_of_films + prior_strength),
+shrunk_mean = shrink_weight * ave_rat +
+(1 - shrink_weight) * Total_Stats$my_ave
+)
+View(A)
+A <- Year_Stats %>%
+filter(no_of_films > 4) %>%
+mutate(
+shrink_weight = no_of_films / (no_of_films + prior_strength),
+shrunk_mean = shrink_weight * ave_rat +
+(1 - shrink_weight) * Total_Stats$my_ave
+)
+View(A)
+prior_strength <- 10  # tweakable
+A <- Year_Stats %>%
+filter(no_of_films > 4) %>%
+mutate(
+shrink_weight = no_of_films / (no_of_films + prior_strength),
+shrunk_mean = shrink_weight * ave_rat +
+(1 - shrink_weight) * Total_Stats$my_ave
+)
+prior_strength <- 5# tweakable
+A <- Year_Stats %>%
+filter(no_of_films > 4) %>%
+mutate(
+shrink_weight = no_of_films / (no_of_films + prior_strength),
+shrunk_mean = shrink_weight * ave_rat +
+(1 - shrink_weight) * Total_Stats$my_ave
+)
+View(A)
+A <- Year_Stats %>%
+filter(no_of_films > 4) %>%
+mutate(
+shrink_weight = no_of_films / (no_of_films + prior_strength),
+shrunk_mean = shrink_weight * ave_rat +
+(1 - shrink_weight) * Total_Stats$my_ave
+) %>%
+inner_join(
+Film_Nos %>% select(year, IMDb_Studio_Films),
+by = "year"
+) %>%
+mutate(My_Ratio = no_of_films / IMDb_Studio_Films)
+source(here::here("R","globals.R"))
+source(here::here("R", "core_data.R")) #No stats brought through yet!!!
+source(here::here("R", "years.R"))
+Min_Film_Years <- 5
+Year_Stats_Bonus <- Tidy_Ratings  %>%
+group_by(year) %>%
+filter(n() >= Min_Film_Years) %>%
+summarise("no_of_films" = n(),
+"ave_rat" = mean(your_rating),
+"ave_irat" = mean(IMDb_Rating),
+"combo_ave" = (ave_rat + ave_irat) / 2,
+"ave_runtime" = mean(runtime_mins),
+"ave_dif" = round(mean(rate_dif), 2),
+"ave_votes" = mean(num_votes),
+"per_like_more" = round(100 * (sum(LikeMore) / n()), 1))
+A <- Year_Stats %>%
+filter(no_of_films > 4) %>%
+mutate(
+shrink_weight = no_of_films / (no_of_films + prior_strength),
+shrunk_mean = shrink_weight * ave_rat +
+(1 - shrink_weight) * Total_Stats$my_ave
+) %>%
+inner_join(
+Film_Nos %>% select(year, IMDb_Studio_Films),
+by = "year"
+) %>%
+mutate(My_Ratio = no_of_films / IMDb_Studio_Films)
+View(A)
+lambda <- 0.7  # tweak this
+A <- A %>%
+mutate(
+selection_penalty = lambda * My_Ratio
+)
+View(A)
+A <- Year_Stats %>%
+filter(no_of_films > 4) %>%
+mutate(
+shrink_weight = no_of_films / (no_of_films + prior_strength),
+shrunk_mean = shrink_weight * ave_rat +
+(1 - shrink_weight) * Total_Stats$my_ave
+) %>%
+inner_join(
+Film_Nos %>% select(year, IMDb_Studio_Films),
+by = "year"
+) %>%
+mutate(My_Ratio = no_of_films / IMDb_Studio_Films,
+uncertainty_penalty = 1.96 * my_se,
+final_score = shrunk_mean - uncertainty_penalty - selection_penalty)
+A <- Year_Stats %>%
+filter(no_of_films > 4) %>%
+mutate(
+shrink_weight = no_of_films / (no_of_films + prior_strength),
+shrunk_mean = shrink_weight * ave_rat +
+(1 - shrink_weight) * Total_Stats$my_ave
+) %>%
+inner_join(
+Film_Nos %>% select(year, IMDb_Studio_Films),
+by = "year"
+) %>%
+mutate(My_Ratio = no_of_films / IMDb_Studio_Films)
+lambda <- 0.7  # tweak this
+A <- A %>%
+mutate(
+selection_penalty = lambda * My_Ratio,
+uncertainty_penalty = 1.96 * my_se,
+final_score = shrunk_mean - uncertainty_penalty - selection_penalty
+)
+View(A)
+ggplot(A, aes(x = factor(year), y = 1, fill = final_score)) +
+geom_tile() +
+scale_fill_viridis_c() +
+labs(
+title = "Film Quality by Year (Adjusted)",
+x = "Year",
+y = "",
+fill = "Score"
+) +
+theme_minimal() +
+theme(axis.text.y = element_blank())
+Heat_Map_Decade <- A %>%
+mutate("decade" = to_decade(year),
+"year" = str_extract(year, "\\d$"))
+Heat_Map_Decade %>%
+ggplot(aes(x=year, y=decade, fill= .final_score)) +
+geom_tile() +
+scale_fill_gradientn(colors = hcl.colors(20, "RdYlGn")) +
+theme(legend.position = "none")
+Heat_Map_Decade %>%
+ggplot(aes(x=year, y=decade, fill= final_score)) +
+geom_tile() +
+scale_fill_gradientn(colors = hcl.colors(20, "RdYlGn")) +
+theme(legend.position = "none")
+prior_strength <- 5# tweakable
+A <- Year_Stats %>%
+filter(no_of_films > 5) %>%
+mutate(
+shrink_weight = no_of_films / (no_of_films + prior_strength),
+shrunk_mean = shrink_weight * ave_rat +
+(1 - shrink_weight) * Total_Stats$my_ave
+) %>%
+inner_join(
+Film_Nos %>% select(year, IMDb_Studio_Films),
+by = "year"
+) %>%
+mutate(My_Ratio = no_of_films / IMDb_Studio_Films)
+lambda <- 0.7  # tweak this
+A <- A %>%
+mutate(
+selection_penalty = lambda * My_Ratio,
+uncertainty_penalty = 1.96 * my_se,
+final_score = shrunk_mean - uncertainty_penalty - selection_penalty
+)
+ggplot(A, aes(x = factor(year), y = 1, fill = final_score)) +
+geom_tile() +
+scale_fill_viridis_c() +
+labs(
+title = "Film Quality by Year (Adjusted)",
+x = "Year",
+y = "",
+fill = "Score"
+) +
+theme_minimal() +
+theme(axis.text.y = element_blank())
+Heat_Map_Decade <- A %>%
+mutate("decade" = to_decade(year),
+"year" = str_extract(year, "\\d$"))
+Heat_Map_Decade %>%
+ggplot(aes(x=year, y=decade, fill= final_score)) +
+geom_tile() +
+scale_fill_gradientn(colors = hcl.colors(20, "RdYlGn")) +
+theme(legend.position = "none")
+# Heatmap function
+build_heatmap_data <- function() {
+Year_Stats %>%
+select(year, no_of_films, ave_rat, my_se, ave_irat, pub_se) %>%
+inner_join(
+Film_Nos %>% select(year, IMDb_Studio_Films),
+by = "year"
+) %>%
+mutate(My_Ratio = no_of_films / IMDb_Studio_Films)
+}
+prior_strength <- 5# tweakable
+A <- Year_Stats %>%
+filter(no_of_films > 5) %>%
+mutate(
+shrink_weight = no_of_films / (no_of_films + prior_strength),
+shrunk_mean = shrink_weight * ave_rat +
+(1 - shrink_weight) * Total_Stats$my_ave
+) %>%
+inner_join(
+Film_Nos %>% select(year, IMDb_Studio_Films),
+by = "year"
+) %>%
+mutate(My_Ratio = no_of_films / IMDb_Studio_Films)
+lambda <- 0.7  # tweak this
+A <- A %>%
+mutate(
+selection_penalty = lambda * My_Ratio,
+uncertainty_penalty = 1.96 * my_se,
+final_score = shrunk_mean - uncertainty_penalty - selection_penalty
+)
+ggplot(A, aes(x = year, y = shrunk_mean)) +
+geom_point(aes(size = n, color = coverage), alpha = 0.8) +
+geom_line(aes(y = final_score), linetype = "dashed") +
+scale_color_viridis_c(labels = percent_format()) +
+labs(
+title = "Film Ratings by Year (Adjusted for Bias & Uncertainty)",
+x = "Year",
+y = "Rating",
+size = "Films Watched",
+color = "Coverage"
+) +
+theme_minimal()
+library(scales)
+ggplot(A, aes(x = year, y = shrunk_mean)) +
+geom_point(aes(size = n, color = coverage), alpha = 0.8) +
+geom_line(aes(y = final_score), linetype = "dashed") +
+scale_color_viridis_c(labels = percent_format()) +
+labs(
+title = "Film Ratings by Year (Adjusted for Bias & Uncertainty)",
+x = "Year",
+y = "Rating",
+size = "Films Watched",
+color = "Coverage"
+) +
+theme_minimal()
+ggplot(A, aes(x = year, y = shrunk_mean)) +
+geom_point(aes(size = n, color = My_Ratio), alpha = 0.8) +
+geom_line(aes(y = final_score), linetype = "dashed") +
+scale_color_viridis_c(labels = percent_format()) +
+labs(
+title = "Film Ratings by Year (Adjusted for Bias & Uncertainty)",
+x = "Year",
+y = "Rating",
+size = "Films Watched",
+color = "Coverage"
+) +
+theme_minimal()
+ggplot(A, aes(x = year, y = shrunk_mean)) +
+geom_point(aes(size = no_of_films, color = My_Ratio), alpha = 0.8) +
+geom_line(aes(y = final_score), linetype = "dashed") +
+scale_color_viridis_c(labels = percent_format()) +
+labs(
+title = "Film Ratings by Year (Adjusted for Bias & Uncertainty)",
+x = "Year",
+y = "Rating",
+size = "Films Watched",
+color = "Coverage"
+) +
+theme_minimal()
+Year_Stats <- Tidy_Ratings  %>%
+group_by(year) %>%
+summarise("no_of_films" = n(),
+"ave_rat" = mean(your_rating),
+"my_sd_rat" = sd(your_rating),
+"my_se" = my_sd_rat / sqrt(no_of_films),
+"ave_irat" = mean(IMDb_Rating),
+"pub_sd_rat" = sd(IMDb_Rating),
+"pub_se" = pub_sd_rat / sqrt(no_of_films),
+"ave_runtime" = mean(runtime_mins),
+"ave_dif" = round(mean(rate_dif), 2),
+"dif_sd_rat" = sd(IMDb_Rating),
+"dif_se" = pub_sd_rat / sqrt(no_of_films),
+"ave_votes" = mean(num_votes))
+Total_Stats <- list(
+my_ave = mean(Tidy_Ratings$your_rating),
+pub_ave = mean(Tidy_Ratings$IMDb_Rating, na.rm = T),
+dif_ave = mean(Tidy_Ratings$rate_dif, na.rm = T),
+dif_lowerq = quantile(Tidy_Ratings$rate_dif, probs = c(0.025)),
+dif_upperq = quantile(Tidy_Ratings$rate_dif, probs = c(0.975))
+)
+View(Total_Stats)
+library(lme4)
+model <- lmer(your_rating ~ 1 + (1 | year), data = Tidy_Ratings)
+detach("package:lme4", unload = TRUE)
+library(lme4)
+install.packages("lme4")
+source(here::here("R","globals.R"))
+source(here::here("R", "core_data.R")) #No stats brought through yet!!!
+source(here::here("R", "years.R"))
+Min_Film_Years <- 5
+Year_Stats_Bonus <- Tidy_Ratings  %>%
+group_by(year) %>%
+filter(n() >= Min_Film_Years) %>%
+summarise("no_of_films" = n(),
+"ave_rat" = mean(your_rating),
+"ave_irat" = mean(IMDb_Rating),
+"combo_ave" = (ave_rat + ave_irat) / 2,
+"ave_runtime" = mean(runtime_mins),
+"ave_dif" = round(mean(rate_dif), 2),
+"ave_votes" = mean(num_votes),
+"per_like_more" = round(100 * (sum(LikeMore) / n()), 1))
+library(lme4)
+install.packages("lme4")
+library(lme4)
+model <- lmer(your_rating ~ 1 + (1 | year), data = Tidy_Ratings)
+source(here::here("R","globals.R"))
+source(here::here("R", "core_data.R")) #No stats brought through yet!!!
+source(here::here("R", "years.R"))
+Min_Film_Years <- 5
+Year_Stats_Bonus <- Tidy_Ratings  %>%
+group_by(year) %>%
+filter(n() >= Min_Film_Years) %>%
+summarise("no_of_films" = n(),
+"ave_rat" = mean(your_rating),
+"ave_irat" = mean(IMDb_Rating),
+"combo_ave" = (ave_rat + ave_irat) / 2,
+"ave_runtime" = mean(runtime_mins),
+"ave_dif" = round(mean(rate_dif), 2),
+"ave_votes" = mean(num_votes),
+"per_like_more" = round(100 * (sum(LikeMore) / n()), 1))
+library(lme4)
+model <- lmer(your_rating ~ 1 + (1 | year), data = Tidy_Ratings)
+remove.packages("Matrix")
+install.packages("Matrix")
+source(here::here("R","globals.R"))
+source(here::here("R", "core_data.R")) #No stats brought through yet!!!
+source(here::here("R", "years.R"))
+Min_Film_Years <- 5
+Year_Stats_Bonus <- Tidy_Ratings  %>%
+group_by(year) %>%
+filter(n() >= Min_Film_Years) %>%
+summarise("no_of_films" = n(),
+"ave_rat" = mean(your_rating),
+"ave_irat" = mean(IMDb_Rating),
+"combo_ave" = (ave_rat + ave_irat) / 2,
+"ave_runtime" = mean(runtime_mins),
+"ave_dif" = round(mean(rate_dif), 2),
+"ave_votes" = mean(num_votes),
+"per_like_more" = round(100 * (sum(LikeMore) / n()), 1))
+library(lme4)
+model <- lmer(your_rating ~ 1 + (1 | year), data = Tidy_Ratings)
+remove.packages("lme4")
+remove.packages("Matrix")
+install.packages("Matrix")
+remove.packages("lme4")
+remove.packages("Matrix")
+install.packages("Matrix")
+install.packages("lme4")
+source(here::here("R","globals.R"))
+source(here::here("R", "core_data.R")) #No stats brought through yet!!!
+source(here::here("R", "years.R"))
+Min_Film_Years <- 5
+Year_Stats_Bonus <- Tidy_Ratings  %>%
+group_by(year) %>%
+filter(n() >= Min_Film_Years) %>%
+summarise("no_of_films" = n(),
+"ave_rat" = mean(your_rating),
+"ave_irat" = mean(IMDb_Rating),
+"combo_ave" = (ave_rat + ave_irat) / 2,
+"ave_runtime" = mean(runtime_mins),
+"ave_dif" = round(mean(rate_dif), 2),
+"ave_votes" = mean(num_votes),
+"per_like_more" = round(100 * (sum(LikeMore) / n()), 1))
+library(lme4)
+install.packages("lme4")
+library(lme4)
+model <- lmer(your_rating ~ 1 + (1 | year), data = Tidy_Ratings)
+update.packages(ask = FALSE, checkBuilt = TRUE)
+packageVersion("Matrix")
+packageVersion("lme4")
+install.packages("Matrix", type = "source")
+source(here::here("R","globals.R"))
+packageVersion("Matrix")
+source(here::here("R","globals.R"))
+install.packages("plotly")
+library(plotly)
+install.packages("htmltools")

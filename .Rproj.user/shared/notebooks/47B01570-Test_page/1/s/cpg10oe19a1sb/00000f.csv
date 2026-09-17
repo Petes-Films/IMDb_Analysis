@@ -1,0 +1,2 @@
+"0","     sliderInput(inputId = 'WHM_Film_Count_1', label = 'Select Minimum Films Released',"
+"0","     min = 1, max = max(Year_Stats$no_of_films), value = 6, step = 1)"

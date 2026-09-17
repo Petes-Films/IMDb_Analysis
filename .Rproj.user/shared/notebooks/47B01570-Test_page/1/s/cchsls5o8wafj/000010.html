@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<style>body{background-color:white;}</style>
+<link href="lib/selectize-0.15.2/css/selectize.bootstrap3.css" rel="stylesheet" />
+<script src="lib/selectize-0.15.2/js/selectize.min.js"></script>
+<script src="lib/selectize-0.15.2/accessibility/js/selectize-plugin-a11y.min.js"></script>
+
+</head>
+<body>
+<div class="form-group shiny-input-container">
+  <label class="control-label" id="Ratings_QvQ-label" for="Ratings_QvQ">Select Rating Graph</label>
+  <div>
+    <select id="Ratings_QvQ" class="shiny-input-select"><option value="ave_rat" selected>My Ratings</option>
+<option value="ave_irat">Public Ratings</option>
+<option value="ave_dif">Rating Difference</option></select>
+    <script type="application/json" data-for="Ratings_QvQ" data-nonempty="">{"plugins":["selectize-plugin-a11y"]}</script>
+  </div>
+</div>
+</body>
+</html>

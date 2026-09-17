@@ -1,0 +1,339 @@
+---
+title: "IMDB Analysis - What is Everyone Thinking?"
+author: "Peter Howells"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output:
+  html_document: 
+    theme: flatly
+    code_folding: hide
+    toc: yes
+    toc_float: yes
+    df_print: kable
+  toc_float: default
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+source(here::here("R","globals.R"))
+source(here::here("R", "core_data.R")) 
+source(here::here("R", "scores.R"))
+
+```
+
+# Introduction
+
+I started this project to have some fun playing around in R; and using something that interests me and I know well. Films, and more importantly more around my own tastes.   I've watched a decent amount of films and logging my ratings on IMDb means I can run some numbers on `r Total_Stats$tot_films` movies.  Whilst this still doesn't cover the many films out there it is certainly big enough to analyse trends and gain a bit of insight into my tastes and habits.  The data I can easily extract from IMDb is a bit limited so this won't be a real deep dive, but somehow I've managed to spend way too much time on it.
+
+So whilst I will look at stats on movie trends and audience behaviours I can't read too much into uncovering any hidden insights on movies in total nor how the public reacts.  It will certainly say more about my own preferences and quirks than about the movie industry.  The main aim is just to have fun a mix some serious analysis with a few daft takes thrown in in an area that should make sense to me.
+
+It did start off as a single analysis, but as I kept thinking of different areas to investigate so I've split it into smaller sections which I can just keep expanding on.  I will still cut out a lot of areas but will just keep going as long as I can find fun questions to explore.  This first one will focus on simply the scores and focus around the main question you hear when people go to a review site:
+
+**Can I rely on IMDb ratings as a guide to whether I will enjoy a film?**
+
+## Assumptions and Limitations
+As this is the first part of this analysis, before I get stuck in I want to be as critical I can about the data I have.  The industry is a business, but there is still an entertainment side to it which means some of the parts that make up a movie are not readily quantifiable and some can be more subjective.  I will add to this with other quirks I may notice, but I feel I can say that these are some assumptions and limitations that need to be spelled out when looking at the results of this analysis:
+
+
+**Data Issues**
+
+* **Voter composition varies by film** – niche or obscure films are likely rated by very specific audiences.
+* **Coverage is limited** – this dataset contains no box office data and both mine, and opinions I’ve seen online, suggests genre tagging quality of IMDb can occasionally be questionable.
+* **Granularity differs** – my ratings are whole numbers, whereas IMDb scores are aggregrated and given to an order of magnitude smaller.
+
+**Ratings Issues**
+
+* **Ratings are subjective** – IMDb does not define what a score means, and people use scales very differently.
+* **IMDb scores are a wild west** – they’re open to manipulation and reflect uncontrolled voting behaviour.
+
+**Personal Taste Bias** 
+
+* **My own ratings are inconsistent** – I can be absolutely certain that my mood and just life on general has impacted my voting.  and on occasion will revisit the scores of some films.
+* **My own rating is my taste** 
+    + I can tell I enjoy more quirky movies than other people, The Fox Family is a classic even if no one seems to agree with me!
+    + I've had a good time watching a pretty rubbish movie.  Fateful Findings is a mess, that is god awful, but I'm still glad I watched it.
+    + Equally there are some well made films that have stories that don’t work for me so are scored on that rather than the overall quality of the film. (I've never wanted to be a Luke Skywalker nor Han Solo).
+* **So bad it's good** - My rating are about my entertainment as well as the quality.  This doesn't mean I take joy in just poorly acted films, more often than not it doesn't work.  Just sometimes those films were made with passion and heart, but maybe lacking in ability somewhat. Munchies, Gingerdead Man, Microwave Massacre all made me smile, their scores make me cry.
+
+So a lot of quirks to keep in mind when analysing the results.  The main thing I believe it's more just films I found dull when it feels like I wasted my time watching it.
+
+## Data Cleansing
+To keep the data consistent I did some minor cleansing that can be done quickly in bulk. This was:
+
+ * Restricted to only "Movie", "Video" or "TV Movie".
+ * Removed Shorts (from genres) and entries with missing runtime data
+ * If no votes/IMDb score adjust to represent at least my vote that is in there (1 vote, IMDb Score = average rating as IMDb does not give an average unless there is more than 5 votes)
+ * clean up title headings
+ 
+There still some specific fixes, so if I spot anything such as directors with the same name or some missing fields in IMDb that are easy to pick up elsewhere, then I will put some code in to tidy up teh dataset used here.
+
+Some of the films I watch are very niche and with low numbers, there can be a need to do further cleansing when reviewing aggregated data.   For this analysis I want to keep everything to represent my score as best as possible.  For example just looking at films with low number of votes on IMDb.   Even at a `r Defaults$min_votes` vote minimum filter that would mean I'd currently lose `r nrow(Tidy_Ratings %>% filter(num_votes <= Defaults$min_votes))`  films, so I want to keep those in as that does reflect my tastes.
+
+
+# Overall Stats
+Let's have a quick look at the data and what the general stats are to get a rough picture before we start diving in to the analysis.
+```{r All_Stats}
+Stats_Table(Tidy_Ratings, stats=stats) %>%
+  Stats_Table_Format()
+
+```
+
+My main takeaways from this summary are:
+
+* My average rating is fractionally lower than the public average for the films I watch.
+* My ratings are more spread out than IMDb’s.
+* The public vote clusters more tightly around the middle of the scale.
+* There is a wide spread of data across the other numerical categories of year released, number of votes and run time of the movie.
+
+
+# Analysis
+## Distribution of Scores
+
+First is a simple plot of the spread of both mine and the public ratings.
+
+
+```{r Whole_Pop_dense}
+
+Tidy_Ratings %>% 
+  rename('My Ratings' = your_rating, 'Public Rating' = IMDb_Rating) %>% 
+  pivot_longer(
+  cols = c(`My Ratings`, `Public Rating`),
+  names_to = "variable",
+  values_to = "value") %>% 
+  ggplot(aes(x=value, fill = variable)) + 
+  geom_density(adjust = 1.6, alpha = 0.4) + # smoothed out due to discrete rating system
+  theme(axis.text.y=element_blank()) +
+  labs (
+    title = "Density Plot of Movie Ratings",
+    x = "Film Rating",
+    y = element_blank()
+    ) 
+
+```
+
+Both distributions roughly cluster around the middle of the scale, but with noticeably different shapes:
+
+* IMDb scores are more tightly concentrated, reflecting consensus.
+* My scores are flatter, using more of the 1–10 range.
+* Both curves sit slightly in the above average range.
+
+This probably reflects the fact that most people mostly choose films they expect to enjoy and that a lot of the cinema is seen as broadly good.   When you look over big populations not too many films end up universally loved or loathed.  I will delve into the spread of votes in another analysis to understand more if that effect of more people voting reduces the variability of the scoring.
+
+With the public it is unlikely to ever get universal agreement so the min and max stay slightly inside the full range.  I've often looked at a films public rating distribution on the site and I've never seen one with 100% agreement on scores.
+
+With just my vote it is easier to score films on the lower end and as I can go out to deliberate watch films it does lead to a higher volume of films for those low scores.  I really do feel you have to watch a range to understand your taste.  Sometimes you have to watch something you know is awful just to know what bad truly is.
+
+
+## IMDb as a Guide
+### Averaging Against the Public Ratings
+
+A common rule I've heard a lot is “I only watch films rated above X on IMDb”.  I like to think I’m pretty good at judging whether I’ll enjoy a film so have never relied on this.  What if it does work?  have I wasted time trying to judge what a film could be like when I could just look up a score and have a decision?  
+
+To explore this, I looked at my average rating for films at each IMDb score band based on a set minimum number of films of `r Defaults$min_films` to avoid having any outliers giving a more extreme difference from small samples.  As we saw in the previous graph, fewer films get extreme score. That could lead to a point just showing for that score, there was one film I really disagreed with the public.
+
+
+```{r ave_v_ave_Scatter}
+
+
+IMDb_Rate_Count_Filter %>% 
+  mutate(delta = my_ave - IMDb_Rating) %>% 
+  ggplot(aes(x = IMDb_Rating, y = my_ave, size = no_of_films, colour = delta)) +
+    geom_abline(slope = 1, intercept = 0, linetype = "dashed", colour = "grey50") +
+    geom_point(alpha = 0.7) +
+    scale_colour_gradient2(
+      low = "tomato",
+      mid = 'grey85',
+      high = "steelblue",
+      midpoint = 0,
+      guide = "none") +
+    scale_size_area(max_size = 10, guide = "none") +
+    labs(title = "Average Comparison: My Ratings vs Public",
+         x = "Public Average Rating", y = "My Average Rating")
+
+
+```
+
+My theory going into this was that my tastes are quite varied, so the answer would be, no the public score is unreliable!  This chart suggest otherwise as it's a such a strongly correlated result.  The relationship is far more linear than I expected as seen by the Adjusted R² value of `r round(summary(Fit_Ave)$adj.r.squared, 3)`.  Maybe I do need to rethink how I judge a movie.  
+
+This suggest I should just tweak the public score and go in with that expectation.   We see the effect of the extreme ends drifting a bit further.   Probably more of a regression to the mean type effect.  The extremes also contain far fewer films, so individual outliers can cause a bit more fluctuations.
+
+Should I completely alter my approach?  It is only an average effect.  Let's see what's going on behind that average and if we can be confident of the same conclusion.
+
+
+### Film by Film Exploration
+A strong average relationship does not imply agreement on individual films, so for the next graph I've plotted all ratings to see how they differ on a film by film basis.
+
+```{r Full_Res_Scat} 
+
+  Tidy_Ratings %>%
+  filter(your_rating > 1, num_votes > 1) %>% 
+    ggplot(aes(IMDb_Rating, rate_dif, colour = rate_dif)) +
+    geom_jitter(width = 0.1, height = 0.1, alpha = 0.7) + #, colour = "grey40"
+    scale_colour_gradient2(
+      low = "tomato",
+      mid = 'grey85',
+      high = "steelblue",
+      midpoint = 0,
+      guide = "none") +
+      geom_hline(yintercept = 0.9, colour = "grey60") +
+      geom_hline(yintercept = -0.9, colour = "grey60") +
+      geom_smooth(method = "loess", se = TRUE) +
+    labs(title = "Film by Film: My Rating vs Public Rating",
+         x = "IMDb rating", 
+         y = "Difference in Rating")
+
+
+```
+
+Now this creates a different impression and more in line with my expectations. 
+
+With the scoring system most films have to have some difference, so I marked where the difference is within 0.9 as that gives a range where tastes are not too far apart.  We see that the trend line shows on average the bulk of films are within that range.  
+
+Once you go more than `r Defaults$ex_dif` point difference, this is away from any rounding and with a system between 1 and 10 you can take that being beyond this there is a marked difference in enthusiasm between the public and myself.  Currently `r round(Ext_Diff$big_dif / Ext_Diff$no_of_films * 100, 0)`% of films have a difference of more than 1 point.
+
+That's a massive chunk of the films I've watched.  Clearly a lot of the time I'm quite far away from the public opinion of a film.   I feel more validated now in my decision to not be that person who relies on only the IMDb scores.   That score won’t shield be from suffering through some movies and it would mean missing out on some gems (to me anyway).
+
+This is reflected in the Adjusted R² value for when we look at the ratings individually with it dropping to a value of `r round(summary(Fit)$adj.r.squared, 3)`, so way to much variation to be a good metric.
+
+So do I match with the public?   On average - Yes!  Individually... Who knows!
+
+For further validation on how useful the correlation is, by doing a quick Pearson correlation check we can see we have a value of `r round(cor(Tidy_Ratings$your_rating, Tidy_Ratings$IMDb_Rating, method = 'pearson'), 2)`, so it is a fairly mid gauge for judging whether I'd like a movie or not.
+
+To avoid labouring the point I omitted section from this report that checked the analysis if we rounded the IMDb scores to the same granular level as my rating.  The graphs tell the same story and we see similar numbers in the summary stats.  On average the correlation was just as strong with an adjusted R² value of `r round(summary(Fit_Round_Ave)$adj.r.squared, 3)`, but  drops off just as much for a film by film review with with an adjusted R² value of `r round(summary(Fit_round)$adj.r.squared,  3)`.
+
+## Reversing the Question - What Does My Rating Mean Publicly?
+
+Instead of asking “what do I think of a film with IMDb X?”, I reversed the question:
+For films I rate as a 6, 7, or 8 — what do IMDb ratings look like?   Again from averaging the results there was a similar story as before with the scores moving up together albeit on a much tighter line, so we'll go straight to the film v film graph so we can see the full picture and we can still see the average trend across the boxplot.
+
+### Score vs Score
+
+```{r Box_plot_Public_Spread}
+
+  Tidy_Ratings %>%
+    filter(your_rating > 1, num_votes > 1) %>% 
+    ggplot(aes(as.factor(your_rating), IMDb_Rating)) +
+    geom_hline(yintercept = Total_Stats$my_ave, colour = "grey60") +
+  # expand bands to cover quartiles or something?  2 Stds away?
+   #   geom_hline(yintercept = 5.4, colour = "grey60") +
+    #  geom_hline(yintercept = 7.6, colour = "grey60") +
+    geom_boxplot(outlier.alpha = 0.15, width = 0.7, fill = "#F0F4F7") +
+    labs(title = "Public Spread of Scores",
+         x = "My Rating", y = "Public Ratings") +
+    coord_equal(ylim = Defaults$score_limits)
+
+```
+As seen for each of my ratings there is a wide possibility in the corresponding IMDb ratings, though we can see it's not just on average that does have a small change the spread does vary with my scoring.  For the films I really love, it is very rare that the public gives it a low score.   There are still a few films that need to be really tailored to the individuals taste, but it seems most of the films I like I will get a good hit rate recommending them to many people.   This is seen to a lesser degree with films I hated.  Though as I go to my lower rating there is a drop in the higher rated IMDb scores.
+
+So IMDb is safest as a filter against very poor-quality films, less useful as a ranking tool above that.
+
+## Extreme Differences
+
+Finally, I looked explicitly at films where I most disagreed with the public.  Let's get some stats and see if anything is unusual.
+
+
+```{r Table_of_Stats}
+
+Tidy_Ratings %>% 
+  slice_max(rate_dif, n=50) %>% 
+  Stats_Table(., stats=stats) %>%
+  Stats_Table_Format(title = "Overall Statistics for the Top Films I Rate Higher Than IMDb")
+
+Tidy_Ratings %>% 
+  filter(your_rating > 1) %>% 
+  slice_min(rate_dif, n=50) %>% 
+  Stats_Table(., stats=stats) %>%
+  Stats_Table_Format(title = "Overall Statistics for the Top Films I Rate Lower Than IMDb")
+
+rm(stats)
+
+```
+
+I've pulled these tables of stats 50ish films that cover the extreme higher and extreme lower in score differences.  Nothing stands out to indicate any errors in the data.  As my taste is a big factor here I also did a quick scan of the titles.   Certainly for films I love more it doesn't surprise me that these are ones that don’t have wide appeal and hopefully further analysis can show trends that highlight areas that are clearly getting made for sub groups and not the public as a whole.
+
+
+There are noticeable differences between these groups in other data points so there will be promising next steps to look at such as changes over time, popularity or film runtime.
+
+# Conclusion
+
+*	Both mine and the public vote follows a natural distribution, but with the public vote concentrated in a more tighter range
+* The scores peak around 7, so the biggest section of films watch get a decent, but neither spectacular or disastrous rating.
+*	On average I align with IMDb more than expected, so over a large sample size I will enjoy the set of films more the higher the IMDb rating.
+*	IMDB ratings still poorly performs at predicting my individual reaction to a film
+*	Based on my current sampling high rated films are generally a safe bet
+In short:
+IMDb is a good coarse filter, but a poor personal recommender.
+
+Clearly there is plenty to still explore so there will be analysis of ratings over time some analysis that is lined up include:
+
+*	Year trends
+*	Genre breakdown
+*	Director influences
+*	Run time correlations
+*	Number of rating trends
+
+Plus anything else that interest me that I can get some data around.
+
+# Bonus Average
+Nothing is ever average and with films that is the case, but as a bit of fun I got curious as to what would be the film that is the most average to the rest of the films I watched.   It's already a difficult thing to identify as this is the type of data and some of those challenges include:
+
+* This dataset has types of data where there is a noticeable difference from mean to median.  As this is just a bit of fun either could be used, but I will choose median as I want more of a feel to that middle film is.
+* Here other data would have been good such as total box office.
+* Not all the data is easily quantified.
+* No one film matches perfectly so I've made up a scoring system.  I didn't want to spend too much time on it so I may refine it, but don't try and take the logic of it too seriously, particualrly the weighting.  
+* With a scoring system should I only include films that are close in every category?  For this I decided I would filter out anything too far away in a category, but would still have a tighter scoring within that field.
+
+
+```{r bonus_median_smooth}
+
+Most_Med <- Tidy_Ratings %>% 
+  select(title, year, your_rating, IMDb_Rating, runtime_mins, num_votes) %>% 
+  filter(
+    between(your_rating, Fun_List$my - 1.5, Fun_List$my + 1.5),
+    between(IMDb_Rating, Fun_List$pub - 1.3, Fun_List$pub + 1.3),
+    between(year, Fun_List$year - 7, Fun_List$year + 7),
+    between(runtime_mins, Fun_List$run * 0.85, Fun_List$run * 1.15),
+    between(num_votes, Fun_List$vot * 0.85, Fun_List$vot * 1.15)
+  ) %>% 
+mutate(
+  year_score = score_linear(year, Fun_List$year, score_config$year$range, score_config$year$max_score, power = score_config$year$power),
+  my_score = score_linear(your_rating, Fun_List$my, score_config$my$range, score_config$my$max_score, power = score_config$my$power),
+  public_score = score_linear(IMDb_Rating, Fun_List$pub, score_config$pub$range, score_config$pub$max_score, power = score_config$pub$power),
+  time_score = score_relative(runtime_mins, Fun_List$run, score_config$run$range, score_config$run$max_score, power = score_config$run$power),
+  vote_score = score_relative(num_votes, Fun_List$vot, score_config$vot$range, score_config$vot$max_score, power = score_config$vot$power)
+) %>% 
+  mutate(total = year_score + my_score + public_score + time_score + vote_score) %>% 
+  arrange(desc(total))
+
+ g1 <- Most_Med %>% 
+  head(10) %>% 
+  gt() %>% 
+  cols_label(
+    title ~ "Films Title",
+    total ~ "Total Score",
+    year ~ "Year",
+    your_rating ~ "My Score",
+    IMDb_Rating ~ "Public Score",
+    runtime_mins ~ "Runtime (mins)",
+    num_votes ~ "No IMDb Votes",
+    year_score ~ "Year Score",
+    my_score ~ "My Rating Score",
+    public_score ~ "Public Rating Score",
+    time_score ~ "Run Time Score",
+    vote_score ~ "Number of Votes Score"
+  ) %>%
+  tab_header(
+    title = "10 Most Average Films",
+    subtitle = "Films where their stats are closest to this dataset's average"
+  )
+
+g1 %>% my_gt_theme()
+
+rm(g1)
+
+  
+```
+
+It actually doesn't look too bad, I would definitely say these are average films.  When I did play with the numbers it didn't seem to sensitive so happy to take this as a snap shot of what is an average film for me!  It certain worked as a way to pull out films that I haven't really thought of since watching, that aren't objectively terrible nor amazing.
+
+

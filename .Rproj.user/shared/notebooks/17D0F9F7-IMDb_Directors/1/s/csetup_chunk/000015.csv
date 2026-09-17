@@ -1,0 +1,19 @@
+"0","Dir_10_Stats <- Multi_Film_Dir %>% 
+  filter(max_rat == 10) %>% 
+  group_by(director) %>%
+  summarise(""no_of_films"" = n(), 
+            ""ave_rat"" = mean(your_rating),
+            ""my_sd_rat"" = sd(your_rating),
+            ""my_se"" = my_sd_rat / sqrt(no_of_films),
+            ""ave_irat"" = mean(IMDb_Rating), 
+            ""pub_sd_rat"" = sd(IMDb_Rating),
+            ""pub_se"" = pub_sd_rat / sqrt(no_of_films),            
+            ""ave_runtime"" = mean(runtime_mins)) 
+"
+"1","[1m[33mError[39m in `filter()`:[22m
+[38;5;232m[36mℹ[38;5;232m In argument: `max_rat == 10`.
+[36mℹ[38;5;232m In group 1: `director = ""Akira Kurosawa""`.[39m
+[1mCaused by error:[22m
+[33m![39m object 'max_rat' not found
+[90mRun `]8;;x-r-run:rlang::last_trace()rlang::last_trace()]8;;` to see where the error occurred.[39m
+"

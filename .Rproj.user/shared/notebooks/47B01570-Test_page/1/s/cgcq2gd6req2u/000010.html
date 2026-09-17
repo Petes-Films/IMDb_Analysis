@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<style>body{background-color:white;}</style>
+<link href="lib/selectize-0.15.2/css/selectize.bootstrap3.css" rel="stylesheet" />
+<script src="lib/selectize-0.15.2/js/selectize.min.js"></script>
+<script src="lib/selectize-0.15.2/accessibility/js/selectize-plugin-a11y.min.js"></script>
+
+</head>
+<body>
+<div class="form-group shiny-input-container">
+  <label class="control-label" id="Method-label" for="Method">Select Comparison FIlm Number Data</label>
+  <div>
+    <select id="Method" class="shiny-input-select"><option value="IMDb_Studio_Films" selected>IMDb Studio Films</option>
+<option value="IMDb_5_votes_60_min">IMDb 5 votes 60 min</option>
+<option value="IMDb_5_votes_60_min_Countries">IMDb 5 votes 60 min Countries</option>
+<option value="IMDb_Countries_Rated_5_votes">IMDb Countries Rated 5 votes</option>
+<option value="Rated_My_Rated">Rated My Rated</option>
+<option value="US_Cinema_Release">US Cinema Release</option>
+<option value="Studio_Ind_Total">Studio Ind Total</option></select>
+    <script type="application/json" data-for="Method" data-nonempty="">{"plugins":["selectize-plugin-a11y"]}</script>
+  </div>
+</div>
+</body>
+</html>

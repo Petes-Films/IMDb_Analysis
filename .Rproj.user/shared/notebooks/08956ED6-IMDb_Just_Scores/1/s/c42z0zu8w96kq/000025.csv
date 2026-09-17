@@ -1,0 +1,6 @@
+"0",""
+"0","Tidy_Ratings %>% "
+"0","  filter(your_rating > 1) %>% "
+"0","  slice_min(rate_dif, n=50) %>% "
+"0","  Stats_Table(., stats=stats) %>%"
+"0","  Stats_Table_Format(title = ""Overall Statistics for the Top Films I Rate Lower Than IMDb"")"

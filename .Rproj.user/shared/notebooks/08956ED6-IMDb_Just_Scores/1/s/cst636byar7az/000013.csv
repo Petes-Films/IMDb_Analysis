@@ -1,0 +1,5 @@
+"0",""
+"0",""
+"0","Fit_Ave <-  lm(my_ave ~ IMDb_Rating, data = IMDb_Rate_Count_Filter)"
+"0","Fit_Round_Ave <- lm(my_ave ~ IMDb_Rating_Rnd, data =IMDb_Whole_Count)"
+"0",""
