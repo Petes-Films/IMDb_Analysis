@@ -3,3 +3,6 @@
 .Ruserdata
 .Rproj.user/
 .positai
+
+
+*.html
