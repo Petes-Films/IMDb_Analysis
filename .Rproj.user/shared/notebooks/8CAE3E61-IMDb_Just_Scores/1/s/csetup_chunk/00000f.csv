@@ -1,4 +1,0 @@
-"0","source(here::here(""R"",""globals.R""))"
-"0","source(here::here(""R"", ""core_data.R"")) "
-"0","source(here::here(""R"", ""scores.R""))"
-"0",""

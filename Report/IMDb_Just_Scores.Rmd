@@ -134,22 +134,15 @@ To explore this, I looked at my average rating for films at each IMDb score band
 
 ```{r ave_v_ave_Scatter}
 
-
 IMDb_Rate_Count_Filter %>% 
   mutate(delta = my_ave - IMDb_Rating) %>% 
   ggplot(aes(x = IMDb_Rating, y = my_ave, size = no_of_films, colour = delta)) +
-    geom_abline(slope = 1, intercept = 0, linetype = "dashed", colour = "grey50") +
-    geom_point(alpha = 0.7) +
-    scale_colour_gradient2(
-      low = "tomato",
-      mid = 'grey85',
-      high = "steelblue",
-      midpoint = 0,
-      guide = "none") +
+    geom_abline(slope = 1, intercept = 0, linetype = ref_line, colour = ref_col) +
+    geom_point(alpha = ref_alpha) +
+    scale_change() +
     scale_size_area(max_size = 10, guide = "none") +
     labs(title = "Average Comparison: My Ratings vs Public",
          x = "Public Average Rating", y = "My Average Rating")
-
 
 ```
 
@@ -166,22 +159,16 @@ A strong average relationship does not imply agreement on individual films, so f
 ```{r Full_Res_Scat} 
 
   Tidy_Ratings %>%
-  filter(your_rating > 1, num_votes > 1) %>% 
+  filter(your_rating > 1, num_votes > Defaults$no_IMDb_rating) %>% 
     ggplot(aes(IMDb_Rating, rate_dif, colour = rate_dif)) +
-    geom_jitter(width = 0.1, height = 0.1, alpha = 0.7) + #, colour = "grey40"
-    scale_colour_gradient2(
-      low = "tomato",
-      mid = 'grey85',
-      high = "steelblue",
-      midpoint = 0,
-      guide = "none") +
-      geom_hline(yintercept = 0.9, colour = "grey60") +
-      geom_hline(yintercept = -0.9, colour = "grey60") +
-      geom_smooth(method = "loess", se = TRUE) +
+    geom_jitter(width = 0.1, height = 0.1, alpha = ref_alpha) + #, colour = "grey40"
+    scale_change() +
+      geom_hline(yintercept = 0.9, linetype = ref_line, colour = ref_col) +
+      geom_hline(yintercept = -0.9, linetype = ref_line, colour = ref_col) +
+      geom_smooth(method = "loess", se = T) +
     labs(title = "Film by Film: My Rating vs Public Rating",
          x = "IMDb rating", 
          y = "Difference in Rating")
-
 
 ```
 
@@ -211,12 +198,12 @@ For films I rate as a 6, 7, or 8 — what do IMDb ratings look like?   Again fro
 ```{r Box_plot_Public_Spread}
 
   Tidy_Ratings %>%
-    filter(your_rating > 1, num_votes > 1) %>% 
+    filter(your_rating > 1, num_votes > Defaults$no_IMDb_rating) %>% 
     ggplot(aes(as.factor(your_rating), IMDb_Rating)) +
-    geom_hline(yintercept = Total_Stats$my_ave, colour = "grey60") +
+    geom_hline(yintercept = Total_Stats$my_ave, linetype = ref_line, colour = ref_col) +
   # expand bands to cover quartiles or something?  2 Stds away?
-   #   geom_hline(yintercept = 5.4, colour = "grey60") +
-    #  geom_hline(yintercept = 7.6, colour = "grey60") +
+   #   geom_hline(yintercept = Total_Stats$my_ave + 1, linetype = ref_line, colour = ref_col) +
+    #  geom_hline(yintercept = Total_Stats$my_ave -1, linetype = ref_line, colour = ref_col) +
     geom_boxplot(outlier.alpha = 0.15, width = 0.7, fill = "#F0F4F7") +
     labs(title = "Public Spread of Scores",
          x = "My Rating", y = "Public Ratings") +
