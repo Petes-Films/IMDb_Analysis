@@ -95,9 +95,33 @@ scale_change <- function(midpoint = 0, col_limits = NULL) {
   )
 }
 
+# Colour Scale for Heat Map fill plots
+col_change2 <- list(
+  low = "red",
+  mid = "yellow",
+  high = "green"
+)
+
+scale_change_fill <- function(midpoint = 0, col_limits = NULL) {
+  scale_fill_gradient2(
+    low = col_change2$low,
+    mid = col_change2$mid,
+    high = col_change2$high,
+    midpoint = midpoint,
+    limits = col_limits, 
+    guide = "none" # decide if having key helps here especially as fun and the idea to focus on colour over numbers
+  )
+}
+
 # Reference lines for chart style
 ref_col <- "grey50" # or grey 60
 ref_line <- "dashed"
 
 # Normal chart transparency level
 ref_alpha <- 0.7
+
+tidy_plotly <- function(g, tooltip = "text", width = NULL) {
+  ggplotly(g, tooltip = tooltip, width = width) %>%
+    style(showlegend = FALSE) %>%
+    layout(hoverlabel = list(align = "left"))
+}

@@ -156,7 +156,7 @@ Should I completely alter my approach?  It is only an average effect.  Let's see
 ### Film by Film Exploration
 A strong average relationship does not imply agreement on individual films, so for the next graph I've plotted all ratings to see how they differ on a film by film basis.
 
-```{r Full_Res_Scat} 
+```{r Full_Film_Scat} 
 
   Tidy_Ratings %>%
   filter(your_rating > 1, num_votes > Defaults$no_IMDb_rating) %>% 

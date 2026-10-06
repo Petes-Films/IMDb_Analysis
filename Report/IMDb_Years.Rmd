@@ -1,0 +1,616 @@
+---
+title: "IMDB Analysis - Are Things Getting Worse?"
+author: "Peter Howells"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output:
+  html_document: 
+    theme: flatly
+    code_folding: hide
+    toc: yes
+    toc_float: yes
+    df_print: kable
+  toc_float: default
+runtime: shiny 
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+source(here::here("R","globals.R"))
+source(here::here("R", "core_data.R"))
+source(here::here("R", "years.R"))
+
+```
+
+# Introduction
+
+Continuing on from the previous analysis on overall scores, this time, the focus is on time.  Namely how individual years rate and compare.  I feel I always keep hearing that films are getting worse.  There;s times when I've felt that sentiment too, but am I getting more cynical or is it just looking back at older films more nostalgically? Does the data support this, for my rating at least.  I definitely can fall into the cynical camp.  I can feel movies becoming more soulless and making stories that don't excite me, but I know I still keep finding fun and exciting films.  I will hopefully see if there is some over all trends and also take this as a chance to identify which years were great and which were dire where ever they fall in time.
+
+
+## Assumptions and Limitations
+Most points on this are made in the previous analysis, but a few specific points to mention too.   I haven't done any additional work on release dates, some films get released at different times and some get caught in production hell so the release year may not always be representative and I also suspect that for films with long delays it's more likely due to it being a bad film.  So we have to accept that there isn't exactly a correct year.
+
+It is also a bit of a forced metric as things don't change exactly on a year, but will give a good enough feel on trends.  Most likely if I get asked something on films over a period of time it will be rated on a calendar year.  Also with the above point on release accuracy, whilst it would be interesting to look at this on a monthly or weekly basis I don't feel the effort in assuring the quality of that will add much to the insight with the type of analysis I am doing.
+
+I also suspect that there will be for the older films a lot of survivorship bias.  Both with the availability of a copy and the ones that are still talked about.  Though that could be countered as well with these films being made in a different time.   Cultural changes or innovative scenes becoming tired tropes means some of those films won't hit as hard as they could have done watching them when they came out.  
+
+## Data Cleansing
+To keep the data consistent I did some minor cleansing as discussed in the previous analysis
+ 
+# Number of Films Watched Over Time
+
+## Annual Film Counts
+Before we dive into what is a good year, lets see what my spread of films looks like; what years I've covered; and also to see which years are pretty unexplored.  Whilst the ratings started in 2000s I’ve always enjoyed diving into the past and have caught plenty of classic movies. It's clear we live in a time of abundant film choice, but there are still classic films to go back and catch up on.  The dataset technically goes back to the early 1900s, but once filtering for feature-length films, the earliest entries come from the 1920s such as The Cabinet of Dr. Caligari and Nosferatu.
+
+
+```{r Films_per_Year}
+
+g <- Tidy_Ratings %>% 
+  group_by(year) %>% 
+  mutate("films" = n()) %>% 
+  ggplot(aes(year, text=paste0("<b>Year:</b> ", year, 
+                               "<br><b>Total Films:</b> ", films))) +
+  geom_bar(width = 0.8, fill = base_col) +
+  labs (
+    title = "Number of Films Watched Each Year"
+    )  +
+    theme(
+      axis.text.x =  element_text(angle = 45),
+      axis.title.x = element_blank(),
+      axis.title.y = element_blank()
+    ) 
+
+tidy_plotly(g, width = 750, tooltip = "text")
+
+rm(g)
+
+```
+
+All years are clearly not equal.  WHilst I have managed to watch a lot of old films it is very spread out pre 1970. I can see currently the sample sizes are too low to do commentary on the years specifically as the rating is easily distorted by a single film having a strong reaction for me.
+
+Then there is still a bit of a transition period and once we get to the mid 1980s, the number of films definitely becomes large enough to support more stable comparisons.  With even more certainty from the late 90s when this stays consistently high (50+ films), though the impact of COVID can be seen with a clear drop in numbers.  And as always there will always be a bit of a lag on recent years as there's just more time to go back and catch up on films and take more of a risk when watching them at home.  Though quite often I can still find good films I just missed there's plenty of films that interest me that don't get much press or can be hard to find a copy to watch.
+
+Interestingly I have watched a film representing every year from the mid 1940s until the present year.  
+
+## Decade Level Patterns
+Let’s aggregate it per decade to see how those earlier years look. To see if that supports where the analysis will be stronger.
+
+
+```{r Films_per_Decade}
+
+g <- Tidy_Ratings %>% 
+  mutate("decade" = as.character(to_decade(year)))  %>% 
+  group_by(decade) %>% 
+  mutate("films" = n()) %>% 
+  ggplot(aes(decade, text=paste0("<b>Decade:<b> ", decade, 
+                                 "<br><b>Total Films:<b> ", films))) +
+  geom_bar(fill = base_col) +
+  labs (
+    title = "Number of Films Watched Each Decade"
+    )  +
+    theme(
+      axis.text.x =  element_text(angle = 45),
+      axis.title.x = element_blank(),
+      axis.title.y = element_blank()
+    ) 
+
+tidy_plotly(g, width = 750, tooltip = "text")
+
+rm(g)
+
+```
+
+Aggregating films by decade reinforces this pattern. Pre 1970 the total number of films makes up just `r round(nrow(Tidy_Ratings %>% filter(year < 1970)) / Total_Stats$tot_films *100, 1)`% of the films I've watched.  Even just grouping in periods and having this as a classic cinema era it still lacks volume to compare to other periods.  There will be interest in these films, but it becomes more like historical curiosities. Viewing peaks from 2000, though even taking into account COVID effects there does feel like a little drop in numbers watched for recent years.
+
+# Rating Trends Over Time
+I've made this part a bit more interactive so I can play around with some of those factors so you can switch between a longer picture over time versus filtering to well explored years.  Plus I can then also flip between my rating trends and the public rating trends and even just the differences between them.  This makes it more of a reusable tool and you can look at more sensitivities
+
+I have also added a toggle for the ratings view.  This analysis has mainly fallen around two areas.  
++ Investigating which years I rate more highly or lowly then others.  By having the chart fit to the range of ratings it becomes easier to see which years are above each other to help highlight good and bad time.  This is the default view as I am sure most people want to see what was the worst or best year.
++ Analysing the overall trends over time.  As the scoring is limited to 1-10, you can toggle to this setting so that you can see on the full scale what the difference really is.  This gives a fair view on how significant the trends are without distorting what the difference actual is.
+
+One area to note, I added the rating difference between mine and the public just for interest.  It's a different scale so it only really works on it's rating scale.  Rather than over engineer it more than I have, I have kept the axis toggle for this data, but it won't really work for the 1-10 scale.
+
+
+::: columns
+::: column
+
+``` {r Trends_Left_Input}
+
+    sliderInput(inputId = 'Movies_Count', label = 'Select Minimum No of Films Watched per Year',
+    min = min(Year_Stats$no_of_films), max = max(Year_Stats$no_of_films), value = 6, step = 1)
+
+    numericInput(inputId = "RollAve", label = "Rolling Average Period for Trend Line",
+             value = 2, min = 1, max = 12, step = 1, width = NULL)
+```
+    
+:::
+
+::: column
+
+``` {r Trends_Right_Input}
+   
+    selectInput("Ratings", "Choice Rating Data Source", choices = rating_choices)
+
+    radioButtons(inputId = "Axis_Scale", label = "Rating Axis Toggle", choices = axis_choices, selected = "focused", inline = FALSE)
+                
+```
+    
+:::
+:::
+
+``` {r Year_Trends}
+
+filtered_data <- reactive({
+  Year_Stats %>%
+    filter(no_of_films >= input$Movies_Count)
+})
+rating_label <- reactive({
+  names(rating_choices)[rating_choices == input$Ratings]
+})
+
+renderPlot({
+  axis_limits <- if (input$Axis_Scale == "full") {Defaults$score_limits} 
+  else {
+    rating_range <- range(filtered_data()[[input$Ratings]])
+    rating_padding <- diff(rating_range) * 0.05
+    rating_range + c(-rating_padding, rating_padding)
+  }
+  
+  ggplot(filtered_data(), aes(x = year, y = .data[[input$Ratings]])) + 
+    geom_point(color = point_col) +
+    geom_line(aes(y = rollmean(.data[[input$Ratings]], input$RollAve, fill = "extend")), colour = line_col) + 
+      scale_y_continuous(
+        name = rating_label(),
+        limits = axis_limits
+      ) +
+      labs(x = "Year",
+          title = paste(rating_label(), " over Time")) +
+      theme_classic() +
+      theme(plot.title = element_text(size = 16, face = "bold", hjust = 0.5))
+  })
+```
+
+``` {r R2_Trend}
+
+renderText({
+  
+  fit <- lm(as.formula(paste(input$Ratings, "~ year")), data = filtered_data())
+  paste0(rating_label(), " Adjusted R²: ", round(summary(fit)$adj.r.squared, 3))
+})
+
+```
+
+## Personal Ratings
+
+Across all years, my personal ratings are a bit of a mess with no real correlation.  You can see that currently pre 1960s it's pretty much just one film per year so no real assessment of what cinema on a year by year basis.
+
+When restricting to years with at least 5–30 films, a slight downward trend appears, followed by a recent upturn. This pattern likely reflects:
+
+* Earlier films I've seeked out because I've heard good things or they appear to match my taste.
+* My personal opinion that studios push money over artistic risk taking.   It's just financially better to make films many people with like, versus hitting a small audience with films they would love.
+
+The adjusted R² number for these sample size varies a little, but stays around 0.45–0.6.  So we are seeing a correlation, but it is still quite a noisy graph and average rating can still jump around a bit for adjacent years.
+
+As we start going above that it starts to filter out the 80s years and going into the 40+ count of films which are now the years where the films have come out after I started rating movies in this way.  Whilst we are still seeing it dip a bit towards that 2020 period and then rebound back a bit the overall pattern is still quite spread out and points more towards a few bad years with individual years jumping up and down showing in the adjusted R² more around the 0.3-0.4 range so the year by year variation is much more random then can be called a trend.
+
+I feel I may be a bit more critical of late, but there isn't really too much variation.  I have set the scale to adjust to really focus on the difference, but if we kept a fix axis for the 1-10 scale, the line looks quite flat.  It generally gets flatter as the films watched increase, so although there has to be a better and worse year, stepping back this still shows there isn't a big difference in the average score.
+
+Lets look at the public's rating to see if that shows any different patterns.
+
+## Public Ratings
+
+Public ratings across all years, shows a clearer downward slope from early cinema to the present (adjusted R² circa 0.6). This does look more in line with that earlier assumption of selection bias, where those older movies that are still easily available and I choose to watch are filtered down to the more acclaimed ones.
+
+When restricting sample size to 5 - 30 range, then the scoring is much more flat and across a tighter range than my own scoring.  No correlation really from one year with the adjusted R² value in the 0.1-0.3 range.  So it seems like the public opinion of films just merges together, which we saw in the overall scores with a tight distribution and certainly from the 1980s my choice of films means most years are staying within a certain range and can change as much between that from year to year.  When you zoom out you do see for the public ratings on average it is quite flat and that the year by year variation is much more of a bigger factor than any overall trend that can be measured.
+
+There are still a few outliers around 2018 and 2020 and it does feel like my data there is still a bit of a drop around here, so maybe there is more something in that was just a bad patch of movie making recently that has helped fuel the sentiment along with a selective look at much older movies (pre 1980s at least) that has allowed that narrative to be more believed than what the reality is.
+
+As I said in the previous section, I have focused in on the differences to answer who is top, but again with a wider scale we see that once there are a few votes the public rating really converges to the same rating.  This we saw in the overall scores with a very tight distribution around that overall average.  The only thing that is noticeable is that COVID had an effect as it is the only part that really pulls away from the graph and is now just starting to recover back to that normal average.
+
+## Difference Between Personal and Public Ratings
+The differences between my ratings and public ratings vary considerably year to year and do not form a meaningful trend, but kept in just as a another option to explore.
+
+# Quality vs Quantity
+
+## Is volume an effect
+
+We seen that there is both a change in the average ratings per year and the number of films watched.  Does that mean we are really seeing a pattern of films watched?  Lets have a look at plotting ratings versus film numbers to understand this better.
+
+::: columns
+::: column
+
+``` {r Vol_Input_Left}
+
+    sliderInput(inputId = 'QvQ_Count', label = 'Select Minimum No of Films Watched per Year',
+    min = min(Year_Stats$no_of_films), max = max(Year_Stats$no_of_films), value = 5, step = 1)
+
+    radioButtons(inputId = "QVQ_Axis_Scale", label = "Rating Axis Toggle", choices = axis_choices, selected = "focused", inline = FALSE)
+
+```
+    
+:::
+
+::: column
+
+``` {r Vol_Input_Right}
+   
+    selectInput("Ratings_QvQ", "Choice Rating Data Source", choices = rating_choices)
+                
+```
+    
+:::
+:::
+
+
+``` {r Volume_Trends}
+
+renderPlotly({
+  
+# Set rating axis limits depending on user selection
+axis_limits <- if (input$QVQ_Axis_Scale == "full") {Defaults$score_limits} 
+  else {
+    rating_range <- range(filtered_data()[[input$Ratings]])
+    rating_padding <- diff(rating_range) * 0.05
+    rating_range + c(-rating_padding, rating_padding)
+  }
+
+df <- Year_Stats %>%
+  filter(no_of_films >= input$QvQ_Count)
+
+  var <- input$Ratings_QvQ
+  label <- names(rating_choices)[rating_choices == var]
+
+  fit <- lm(as.formula(paste(var, "~ no_of_films")), data = df)
+
+df <- df %>%
+  mutate(pred = predict(fit), resid = .data[[var]] - pred) %>%
+  arrange(no_of_films)
+
+  max_resid <- max(abs(df$resid))
+
+  p <- df %>% 
+    ggplot(aes(x = no_of_films, y = .data[[var]], colour = resid,
+               text = paste0("<b>Year:</b> ", year,
+                             "<br><b>Films watched:</b> ", no_of_films,
+                             "<br><b>Average rating:</b> ", round(.data[[var]],2),
+                             "<br><b>Distance from trend:</b> ", round(resid,2))
+               )) +
+    geom_point(size = 3, alpha = ref_alpha) +
+    geom_line(aes(y = pred, x = no_of_films), linetype = ref_line, colour = ref_col, inherit.aes = FALSE) +
+    scale_change(col_limits = c(-max_resid, max_resid)) +
+    scale_y_continuous(
+        limits = axis_limits
+      ) +
+    labs(
+      x = "Number of Films Watched",
+      y = label,
+      title = paste("Change in", label, "Against Number of Films Watched")
+    ) +
+    theme(
+      plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+      legend.position = "none"
+    ) 
+
+  ggplotly(p, tooltip = "text") %>%
+    layout(hoverlabel = list(align = "left"))
+
+})
+
+```
+
+``` {r Vol_R2_Trend}
+
+renderText({
+
+  df <- Year_Stats %>%
+    dplyr::filter(no_of_films >= input$QvQ_Count)
+
+  var <- input$Ratings_QvQ
+  label <- names(rating_choices)[rating_choices == var]
+
+  fit <- lm(as.formula(paste(var, "~ no_of_films")), data = df)
+
+  paste0(label, " Adjusted R²: ", round(summary(fit)$adj.r.squared, 3)
+  )
+
+})
+
+```
+
+This shows that years with fewer than five films watched, vary wildly. At this level, the results are much more about the individual films watched than any meaningful trend for the year. Beyond that, there is still a clear downward trend, although this is much more pronounced at the lower-volume end. Once we get to years where I've watched 35–40 films or more, the results become much flatter and more scattered.
+
+I think this reflects when I've watched relatively few films that year, it is more likely to have focused on the acclaimed films or those that match my tastes more. As I watch more, the selection becomes wider, so the average rating naturally starts to come down.  Then numbers for that year start to slow down as I do like to watch the odd bad film, but I do try to minimise these and films that feel dull to me.  Even when I do, now when I get to those higher volumes it becomes hard for one film to shift the score so it still converges around the overall average.
+
+So I wouldn't interpret this as simply watching more films causing me to give lower ratings.  It's more likely that the number of films watched reflects how widely I've explored a year, and that this broader selection changes the mix of films being rated.
+
+As previously, you can toggle the axis.  The main interest is the change so the default is to start with a more focused view around the data points, but still allowing you to step back and look at the overall trend within the scoring limits.  This does highlight that again it is not a massive change for my ratings and for the public scores once you get above a dozen ratings the trend does look flat.
+
+# Film Volume vs Trend
+
+## Sample Size Exploration
+Based on what we've seen, this raises the question of why am I not watching more films from the 70s and 80s?   I have in the past used IMDb to filter to a list of films per year to see what my options would be.  If I haven't watched many films there should be plenty that interest me, but not many pre 1980s films are in my watchlist.  This makes me less confident that, if I tried to match 21st century level of watched movies, the average would still stay that high.
+
+There's another dilemma.  It's not just sample numbers, but sample ratios.  The more I looked the more complex it looked and the more questions I thought about:
+
+* Do I know how many films were available to watch?  
+* Does having more films mean I should be watching more good films? 
+* Does total number of good films or higher percentage of good films make a better year?
+
+I'm not convinced there is a definitive answer, but I decided it was an interesting question so the following analysis will at least explore this area. Not to lead me to an unquestionable conclusion, more to give a feel to what was a good year for me.  I can choose to judge a year in what way I see valid and I'm curious of what comes out on top if we make the metrics more complex.
+
+I searched online to see if there had been much work done in this area.  There were certainly some pieces, but this showed that there were different ways of measuring film numbers and I couldn't find an analysis that was trying to do this type of review.  The one conclusion was film numbers trended up, but unpicking this for some exact numbers made things murky to say the least.
+
+## Difficulties in Measuring Release Volume
+Trying to quantify film production over time gave me inconsistent patterns depending on the data source:
+
++	Total films listed on IMDb have increased dramatically, especially since the 1990s, due to lower barriers to film making.
++	Cinema release counts show different trends, influenced heavily by independent studio output.
+
+
+More releases can be said to lead to me being able to watch more films, but quantity doesn’t equally quality.  Can I really expect that because more films are released it is worse if the percentage of films drop. It's not surprising with thousands of films coming out on different medians no one has really put anything together to categories the production value of a film.  Is this an art project?  Some hack throwing something cheap together?  
+
+A YouTuber I watch did a video on the worst horror movie of 2025 that really highlights this point.  Whilst there has always been people out there that will make really low budget horror movie that may be more focused on getting people to watch from being controversial or selling via sex, it may not be fair to count all films that come out this way as part of the available films.  The film reviewed Bikini Guillotine by director Jamie Grefe.   The reviewer made a fair point that as they hadn't watched every horror movie in 2025 they couldn't definitely say it was the worst horror movie of the year.  They then say that they couldn't even be certain it was the directors worse movie that year as they had 40 credits alone!  Personally I feel just because something is able to get a film listed on IMDb now, there's still got to be a level of professionalism or at least love of cinema for that to be part of the eligible films that I may actually watch for a year.
+
+Large volumes of ultra low budget films, some produced in the dozens by individual micro studios distort modern film counts and do not meaningfully contribute to comparisons of film quality across eras.   So I don't expect I'd get a definitive answer, but I will try to pick a method that I can be reasonably happy with.
+
+You can see this for yourself.  Just use the IMDb filters and see that filtering to just pages listed as a Movie, TV Movie or Video, gives over 1.1 million!  Even adding more film quality criteria, if we set a min runtime of 40 minutes to avoid shorts, it's over 600k pages.  Filtering further to films where it hits the min rating count, then it's still over 350k pages.  Even at 50 or more votes, to get past films that maybe limited to friends and family, it's over 200k records.  And that wil still miss the odd film.
+
+I feel I've watched a lot of films, I'm barely 1% into those numbers even after putting in a lot of filters.
+
+## Developing a Sensible Metric
+I thought of several rules to filter films to a more realistic set and taking into account what the types of films that I have been watching (e.g., 60 minute minimum runtime, rated entries, geographic filters). 
+
+I found very few analysis with clear sources and the picture was a little messy.   I did get some stats on number of films released in the cinema. This site gave a source for recent films released in the cinema in US and Canada https://www.statista.com/statistics/187122/movie-releases-in-north-america-since-2001/ and this was another source of studio and independent film numbers in cinema https://www.the-numbers.com/market/.   These give a picture of trends in films that make it to cinema quality.
+
+From these source, and looking at IMDb numbers, I have created a dataset so I can see what type of categorising of film best matches the pool I'm selecting my films from.   I have the graph below to toggle between them to pick one for further analysis to see if I can say something about years that give me a higher ratio of good films.  I do want to avoid picking a pattern that I feel fits, however I don't see anything that has changed my recent habits.  Whilst there are variations over the years, (some explainable - COVID, some more unexpected - seriously, 2014 why do films from this year keep popping up on my radar!) it seems reasonable to expect the trend on recent films to be a similar trend to the best categorising of the film pool I am actually selecting from.
+
+```{r Volume_check_Inputs}
+
+selectInput("Method", "Select Comparison FIlm Number Source Data", choices = vol_choices)
+
+```
+
+```{r Volume_check_chart}
+
+renderPlot({ 
+  W <- Year_Stats %>% 
+    select(year, no_of_films)
+  
+  y <- Film_Nos[[input$Method]]
+  
+  ylim.prim <- c(min(y, na.rm = TRUE), max(y, na.rm = TRUE)) 
+    
+  ylim.sec <- c(min(W$no_of_films), max(W$no_of_films)) 
+
+  b <- diff(ylim.prim)/diff(ylim.sec)
+  a <- ylim.prim[1] - b*ylim.sec[1]
+
+  Film_Nos %>%
+    inner_join(W, by="year") %>% 
+    filter(year >= method_start_year[input$Method], year <= year_vol_max) %>% 
+    ggplot(aes(x = year)) +
+    geom_line(aes(y = .data[[input$Method]])) +
+    geom_line(aes(y=a + no_of_films * b), col = line_col) +
+    scale_y_continuous(
+        name = "No of Films",
+        sec.axis = sec_axis(~ (. - a)/b, name="No of Films Watched")
+      ) +
+      labs(x = "Year",
+          title = "Film Numbers Over Time") + 
+      theme_classic() +
+      theme(plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+            axis.line.y.right = element_line(color =  line_col),
+            axis.ticks.y.right = element_line(color =  line_col),
+            axis.text.y.right = element_text(color =  line_col),
+            axis.title.y.right = element_text(color =  line_col))
+  
+})
+
+  
+```
+
+So now I break away from good analytical practises.  Even more than I normally do.  Now we really enter the territory of vague questions and feelings.  
+
+I've created a graph to switch between the options and overlay this over my numbers across the years.  This isn’t intend to be rigorous analysis, purely a visually so I can see how well the data tracks across all years.  Looking at one that best follows my viewing habits.
+
+There isn't much value in trying to find the closest statistical match when the underlying categories aren't particularly well defined and the different sources don't necessarily count films in the same way.  What I'm really interested in is which source best identifies the years where I've watched significantly more or fewer films relative to other years.
+
+Once I've settled on that, I use it as an indication of how extensively I've explored each year.  This is purely for this artificial metric for best year where I can combine the average rating with the level of exploration to create a hybrid score that gives a different measure of which years have been best.
+
+One thing is clear is that there have been changes throughout the years which open up filming making to a wider audience.  Definitely starting around the 80s as video  becomes available creating more markets to sell films, but this continues further as we move in to a digital world and reduce barriers making it cheaper to create films.  The straight IMDb numbers show that this is constantly going up, but this does not reflect my changes and as mentioned counting a lot of films that are not there for a wider audience.
+
+The trend of films I watch per year seem to fit better with films that IMDB has as having a US certificate.  I'm a little disappointed as I feel I do try and explore more films off the beaten path, but maybe that ratio doesn't change much and the core is correlated with films that at least get a US certification.  
+
+The main thing we see is it is definitely below the curve for the 70s numbers, which does suggest I haven't been able to delve in to the past as much, so those higher scores are likely impacted by being able to filter out more films I wouldn't like.  
+
+For fun and to see it more cleanly I will plot this in to a heat map chart.
+
+IMDb numbers still vary from time to time and I won't keep the film numbers dataset as up to date so for interest the filters I used on IMDb to get the numbers are: Films that have a US certificate, of at least 60 minutes, with 5 votes and released in the following countries: USA, UK, South Korea, Japan, China (HK, Taiwan, Macao), Mexico, SA, Australia, France, Germany, Norway, Iceland, Finland, Belgium, Sweden, Denmark, Italy, Spain, Portugal, Brazil, Argentina, Netherlands, Philippines, Indonesia, Vietnam, Soviet Union
+
+## Heat Map Assessment
+
+I've made this heat map interactive so that the effect of sample size can be looked at.  Though the data available is limited to the late 60s as there is little value searching for reliable early data when I just haven't watched enough early films.  For compactness you can toggle between ratings as well so you can see how the numbers seen earlier look in this format.
+
+::: columns
+::: column
+
+``` {r Year_Heat_Map_Numb_Left_Input}
+
+     sliderInput(inputId = 'HM_Film_Count', label = 'Select Minimum No of Films Watched per Year',
+     min = 1, max = max(Year_Stats$no_of_films), value = 6, step = 1)
+     
+        sliderInput(inputId = 'HM_Min_Year', label = 'Select Earliest Start Year',
+     min = min(Film_Nos$year), max = 2023, value = min(Film_Nos$year), step = 1, sep = "")
+```
+    
+:::
+
+::: column
+
+```{r Year_Heat_Map_Numb_Right_Input}
+    
+    selectInput("Map_Factor", "Choice Rating Data Source", choices = HM_choices)
+
+```
+
+:::
+:::
+
+
+
+```{r Year_Heat_Map_Numb_Output2}
+
+renderPlot({ 
+
+Heat_Map <- build_heatmap_data() %>% 
+  filter(no_of_films >= input$HM_Film_Count, year >= input$HM_Min_Year) 
+
+Heat_Map_Decade <- Heat_Map %>% 
+  mutate("decade" = as.character(to_decade(year)),
+         "year" = str_extract(year, "\\d$"))
+
+map_var <- reactive(Heat_Map_Decade[[input$Map_Factor]]) 
+
+Heat_Map_Decade %>%
+  ggplot(aes(x = year, y = decade, fill = map_var())) +
+  geom_tile(colour = "white") + 
+  scale_change_fill(midpoint = mean(map_var(), na.rm = TRUE))
+ 
+  })
+
+```
+
+There is year to year variation, but as noticed this clearly shows that going further back there is more underrepresentation of films watched.   This imbalance can advantage early years by artificially inflating their average ratings.   This suggest value in going further with the analysis and use a more complex formula for ranking the film quality of each year, trying to balance average score with how confident I am in that score.
+
+The methods I have chosen to calibrate the average year ratings are firstly:
+
+* Bayesian Shrinkage - Years with smaller sample sizes are more sensitive to random variations produced by extreme values particularly with a known bias of starting with the more acclaimed films from the earlier years.  This volatility is seen in the earlier graph of ratings over time where across the 70s it is bouncing up and down even with 5-15 films per year.  This may mask genuine extreme values, but if that was the case I would be seeking out more of those films already so it is worth the trade off.  In this case the rating is correct, but I am not confident it is representative of the year.
+
+* Selection Penalty - To help deal with that bias of selecting the best films I will also manipulate the score to factor in how deep I have gone into the years.  This is certain a loose metric and I could play with the formula more to hone it in, but as a starter it will mean that films where I have not gone as deep into get adjusted on the assumption that the quality of those additional films won't be at the same average of the first set of films I delve into.   This is very true of a new year where I will just go to the cinema to watch the films I have high expectations of and then slowly work my way through the list where I try and pay less with the expectations.
+
+It is only a quick look I have done at the films of years I have watched fewer films, but I feel it is a reasonable assumption and seen a bit in the film numbers vs film rating per year graph that for most years in the past if I did increase that number of films watched it is likely to be at a lower average then the current rating average.
+
+For the resulting chart I have added the parameters so the sensitivity can be tested. Though some may say I created an abomination that spews out random results and may need a more rigorous method.  I had considered other factors for example I looked at a penalty for Standard Error for each year.  When I isolated this factor it seemed to just massively penalise the early years. There was also a risk that of double penalising with the other factors, so I removed it as it made the result more just a graph of which years had the largest standard error.
+
+
+::: columns
+::: column
+
+```{r Adjusted_Heat_Map_Inputs_Left}
+     sliderInput(inputId = 'WHM_Film_Count_1', label = 'Select Minimum No of Films Watched per Year',
+     min = 1, max = max(Year_Stats$no_of_films), value = 6, step = 1)
+
+    numericInput(inputId = 'PS_Factor', label = 'Select the prior strength weighting for the score up to 50',
+     min = 0, max = 50, value = 15, step = 1)
+     
+    numericInput(inputId = 'K_Factor', label = 'Select the weighting for the score up to 2',
+     min = 0.01, max = 2, value = 0.4, step = 0.01)
+    
+    
+```
+    
+:::
+
+::: column
+
+```{r Adjusted_Heat_Map_Inputs_Right}
+    
+    sliderInput(inputId = 'WHM_Min_Year_1', label = 'Select Earliest Start Year',
+     min = min(Film_Nos$year), max = 2023, value = min(Film_Nos$year), step = 1, sep = "") 
+
+    selectInput("WHM_Map_Factor_1", "Choice Rating Data Source", choices = HM_rating_choices)
+
+```
+
+:::
+:::
+```{r more_tetsing_Interactive_Combo_Output2}
+
+selected_metric <- reactive({
+  metric_map[[input$WHM_Map_Factor_1]]
+})
+
+
+renderPlot({ 
+  
+  selected <- selected_metric()
+  
+Heat_Map <- build_heatmap_data() %>% 
+  filter(no_of_films >= input$WHM_Film_Count_1, year >= input$WHM_Min_Year_1) 
+
+prior_strength <- input$PS_Factor 
+
+Heat_Map <- Heat_Map %>%
+  mutate(
+    shrink_weight = no_of_films / (no_of_films + prior_strength),
+    shrunk_mean = shrink_weight * .data[[selected$mean_col]] + 
+                  (1 - shrink_weight) * Total_Stats[[selected$global_mean]]
+  )
+
+ lambda <- input$K_Factor  
+
+Heat_Map <- Heat_Map %>%
+  mutate(
+    selection_penalty =	lambda * log(1 / My_Ratio),
+           final_score = shrunk_mean - selection_penalty 
+  )
+
+
+Heat_Map_Decade <- Heat_Map %>% 
+  mutate("decade" = as.character(to_decade(year)),
+         "year" = str_extract(year, "\\d$"))
+
+  ggplot(Heat_Map_Decade, aes(x = year, y = decade, fill = final_score)) +
+    geom_tile(colour = "white") +
+    scale_change_fill(midpoint = mean(Heat_Map_Decade$final_score, na.rm = TRUE))
+
+    
+})
+
+```
+
+I kept the option to filter the chart based on a minimum number of films and change the starting year so you can focus the analysis to the years with more data.  It is mainly for my rating, but as the data is similar it is set so you can flip between mine and the public ratings.  As this is my sample it won't give an actual picture of what the public rate that year, but can be a check to see if there are any quirks with how the public see the sample of my taste for each year.
+
+The main factors used are:
+
+*	Prior strength
+    + How much I trust small samples vs the overall average
+*	Selection penalty
+    + Punishing years where I’ve only scratched the surface
+
+As with the uncertainty penalty I toiled with, these still have a limit to they just become punish the years with a small sample set.  I put limits on both these variables, but really above a score of 1 and the selection penalty scores start to become the percent of films watched and above 50 we see the same with prior selection.
+
+playing with the factors my thoughts are there is still that trend around 2015-2021 which shows that these years are not the best with hitting an absolute low in 2020.   Although the number of films were low it is relative to what was released so it isn't penalised heavy as I have explored it well.  It also does say that due to the low number of good films the 70s aren't actually that great for me. I can't say that this means the 70s are bad overall, more just that there are two periods that are lower points for films for me, with 1972 looking like the worst in the first period and both 2018 and 2020 clearly the worst in the recent period. 
+
+Looking at the film list currently I am inclined to give it to 2018 as it just has so many bad films, whereas 2020 is just a lot more meh films and 1972 is more affected by the fact I tried to get into Lone Wolf and Cub series, but never really did. 
+
+Let's be more positive now and then look at what are some of the best years and how they are spread though my selection.
+
+I'm definitely and 80s and 90s kid as they stay strong and a few peak years.  As well as recent years, there were some strong years in early 2010s, 2011 and 2013 still stand out.  From this it looks like there are 3 years that are in line for the best year in cinema for me based on quality and quantity and those are 1984, 1992 and 2002, which is a nice spread of years.  These do stand up still as you play with the factors and when we look at some film highlights from these years it is clear why they are above the other years. 
+
+* 1984 has the likes of Ghostbusters, Gremlins, The Terminator, This is Spinal Tap and Beverly Hills Cop and although I haven't watched as many films there is almost nothing that disappoints in that year.
+* 1992, Has Army of Darkness, Candyman, Reservoir Dogs, Dead Alive/Braindead and Cronos, even the bad films for that year are some cheesy horror which I never mind putting on.
+* 2002 just has a lot of good films out of `r round(  mean(Tidy_Ratings$your_rating[Tidy_Ratings$year == 2002] >= 8) * 100,
+  0)`% of films getting at least an 8 for that year.   Plus the top films of City of God, Oasis, Adaptation, Sympathy for Mr Vengeance and One Hour Photo.  This is in the period where I'm watching 50+ movies so we do see a few more bad years, but overall these results feel good to me.
+* 2025 has also shown up well, but more due to not having many bad films as I haven't yet found a film for it that is 10 out of 10.
+
+Whilst you can use this for the public scores and rating differences too, the logic doesn't really work  as its my sampling so I won't review the impact on that 
+
+
+# Conclusion
+
+2018-2020 sucked.  Neither my ratings or the public ratings show it in any good light, there was just a drop in films available as well.  I have reasonable explored it, but have only find a few decent films.  One stand out film in Beyond the Infinite Two Minutes, but that is all I can say.
+
+Some overall comments on what I got from this bit of analysis:
+
+* Sample sizes improve from the mid 1970s, to allow more stable comparison, but it is more towards the start of the 80s where the numbers get better for representing the wider selection of films for the year. 
+* Public scores seem to have a transition period pre 90s which is likely due to how the older films get explored and then rated
+*	Personal and public ratings both show mild downward long-term trends, though these trends weaken when adjusting for sample size.
+*	Differences between personal and public ratings are highly variable and not suited for trend analysis.
+*	Runtime and vote counts show expected patterns, but their relevance is limited without deeper contextual analysis.
+*	Release volume trends are difficult to compare across eras due to inconsistent data sources and dramatic increases in low-budget output.
+
+It will be interesting to see what happens with future years, it is certainly true that we have seen a recent period of cinema that less suited my taste, but it doesn't completely support that films are getting worse.  The love of 80s and 90s cinema is definitely true of myself and maybe responsible for defining my taste.  I feel it may be safe to conclusion that periods as a whole have a small influence, but there is clearly so many factors that the variation year on year will mean that a lot of good films would be missed if you focused on just the date.
+
+Still find it hard to say my favourite year, but if really pushed right in 2026 then I'm giving it to 1984.
